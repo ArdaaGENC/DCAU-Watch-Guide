@@ -1,14 +1,14 @@
-# DCAU İzleme Rehberi - Versiyon 2.1 (Hata Toleranslı)
+# DCAU İzleme Rehberi - Versiyon 2.2 (Süper Hata Toleranslı)
 
 print("--- DCAU Rehberine Hoş Geldin! ---")
 
-# input() ile ekrana bir soru yazdırıp, cevabı 'son_izlenen' değişkenine kaydediyoruz.
+# Kullanıcıdan girdiyi alıyoruz.
 ham_cevap = input("DCAU evreninde en son hangi seriyi bitirdin? (Lütfen tam adını yaz): ")
 
-# Gelen cevabı tamamen küçük harfe çevirip etrafındaki boşlukları siliyoruz.
-son_izlenen = ham_cevap.lower().strip()
+# Önce küçük harfe çeviriyoruz, sonra kelimelere bölüyoruz, sonra tek boşlukla birleştiriyoruz.
+son_izlenen = " ".join(ham_cevap.lower().split())
 
-# Kullanıcının girdiği cevaba göre if/else mantığıyla karar veriyoruz.
+# Kontrollerimiz (tamamen küçük harf ve tek boşluklu)
 if son_izlenen == "batman: the animated series":
     print("Harika bir klasik! Sıradaki hedefin: The New Batman Adventures")
 
