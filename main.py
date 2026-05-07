@@ -1,17 +1,20 @@
-# DCAU Watch Guide - Version 5.1 (Saved Progress)
+# DCAU Watch Guide - Version 5.2 (Updated Timeline and Added TVmaze API Integration)
 import tkinter as tk
 from tkinter import ttk
 import json
 import os
+import requests
 
-# The timeline dictionary (Key: watched series, Value: next series to watch)
-dcau_timeline = {
-    "batman: the animated series": "The New Batman Adventures",
-    "the new batman adventures": "Superman: the animated series",
-    "superman: the animated series": "Batman Beyond",
-    "batman beyond": "Justice League",
-    "justice league": "Justice League Unlimited",
-}
+
+def load_timeline():
+    try:
+        with open("timeline.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print("HATA: timeline.json dosyası bulunamadı!")
+        return {"hata": "Veritabanı Bulunamadı"}
+
+dcau_timeline = load_timeline()
 
 # Function to save the user's last watched show to a JSON file
 def save_progress(last_show_name):
@@ -27,6 +30,22 @@ def load_progress():
             return data.get("last_watched", "Select a series...")
     return "Select a series..."
 
+# Fetches live data from TVmaze API
+def fetch_show_details(show_name):
+    api_url = f"https://api.tvmaze.com/singlesearch/shows?q={show_name}"
+
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            data = response.json()
+            rating = data["rating"]["average"]
+            premiered = data["premiered"]
+            return f"Rating: {rating}/10 | Premiered: {premiered}"
+        else:
+            return "Details not available"
+    except:
+        return "No internet connection"
+    
 # Function to find the next show based on the selected show
 def find_next_show():
     selected_show = show_combobox.get()
@@ -35,9 +54,11 @@ def find_next_show():
         next_show = dcau_timeline[selected_show]
         save_progress(selected_show)
         result_label.config(text=f"Next up: {next_show}", fg="green")
+        details = fetch_show_details(next_show)
+        details_label.config(text=details, fg="blue")
     else:
         result_label.config(text="Please select a valid show from the list.", fg="red")
-
+        details_label.config(text="")
 # Create the main application window
 window = tk.Tk()
 window.title("DCAU Watch Guide")
@@ -66,5 +87,9 @@ calculate_btn.pack(pady=15)
 # Result label
 result_label = tk.Label(window, text="", font=("Arial", 12, "bold"))
 result_label.pack(pady=5)
+
+# Details label
+details_label = tk.Label(window, text="", font=("Arial", 10, "italic"))
+details_label.pack(pady=5)
 
 window.mainloop()
