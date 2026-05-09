@@ -6,14 +6,27 @@ def run():
     def main(page: ft.Page):
         page.title = "Universal Tracker"
         page.window.width = 550
-        page.window.height = 700
-        page.window.min_width = 450
-        page.window.min_height = 650
+        page.window.height = 800
         page.theme_mode = ft.ThemeMode.DARK
-        page.padding = 20
         page.bgcolor = "#1a1a1a"
+        page.horizontal_alignment = "center"
 
-        title = ft.Text("🎬 Universal Tracker", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER)
+        title = ft.Text("🎬 Universal Tracker", size=26, weight="bold", color="amber")
+
+        def switch_to_tab(index, data=None):
+            tabs.selected_index = index
+            if data and index == 0:
+                tab_view.controls[0] = create_tracker_tab(page, switch_to_tab, data)
+            if page:
+                page.update()
+
+        tab_view = ft.TabBarView(
+            expand=True,
+            controls=[
+                create_tracker_tab(page, switch_to_tab),
+                create_library_tab(page, switch_to_tab)
+            ]
+        )
 
         tabs = ft.Tabs(
             selected_index=0,
@@ -28,13 +41,7 @@ def run():
                             ft.Tab(label="Library"),
                         ]
                     ),
-                    ft.TabBarView(
-                        expand=True,
-                        controls=[
-                            create_tracker_tab(),
-                            create_library_tab(),
-                        ]
-                    )
+                    tab_view
                 ]
             )
         )
