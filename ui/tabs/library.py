@@ -1,6 +1,37 @@
 import flet as ft
 import asyncio
 
+class ShimmerSkeleton(ft.Container):
+    def __init__(self):
+        super().__init__()
+        self.width = 120
+        self.height = 180
+        self.bgcolor = "#222222"
+        self.border_radius = 10
+        
+        self.animate = ft.Animation(duration=800, curve=ft.AnimationCurve.EASE_IN_OUT)
+        
+        self.alignment = ft.Alignment(0, 0)
+        self.content = ft.Text("🎞️", size=30, color="#444444")
+        self._is_mounted = False
+
+    def did_mount(self):
+        self._is_mounted = True
+        self.page.run_task(self._pulsate)
+
+    def will_unmount(self):
+        self._is_mounted = False
+
+    async def _pulsate(self):
+        while self._is_mounted:
+            self.bgcolor = "#3a3a3a" if self.bgcolor == "#222222" else "#222222"
+            try:
+                self.update()
+            except:
+                pass
+            await asyncio.sleep(0.8)
+
+
 class LibraryTab(ft.Container):
     def __init__(self, switch_func, db, api):
         super().__init__()
@@ -44,9 +75,13 @@ class LibraryTab(ft.Container):
             *[asyncio.to_thread(self.api.fetch_show_details, title) for title, _, _, _ in pending]
         )
 
-        for (title_str, ring, img, icon), det in zip(pending, results):
-            ring.visible = False
-            if det and det.get("image_url"):
+        for (title_str, skeleton, img, icon), det in zip(pending, results):
+            skeleton.visible = False
+            
+            if det and det.get("local_image_path"):
+                img.src = det["local_image_path"]
+                img.visible = True
+            elif det and det.get("image_url"):
                 img.src = det["image_url"]
                 img.visible = True
             else:
@@ -63,23 +98,26 @@ class LibraryTab(ft.Container):
             title = item if isinstance(item, str) else item.get("title", "")
             cached_det = self.api._cache.get(title)
 
-            ring = ft.ProgressRing(width=30, height=30, stroke_width=3, color="amber")
+            skeleton = ShimmerSkeleton()
             img = ft.Image(src="", fit="contain", width=120, height=180, visible=False)
             icon = ft.Text("🎬", size=35, color="white54", visible=False)
 
             if cached_det:
-                ring.visible = False
-                if cached_det.get("image_url"):
+                skeleton.visible = False
+                if cached_det.get("local_image_path"):
+                    img.src = cached_det.get("local_image_path")
+                    img.visible = True
+                elif cached_det.get("image_url"):
                     img.src = cached_det.get("image_url")
                     img.visible = True
                 else:
                     icon.visible = True
             else:
-                self._pending_posters.append((title, ring, img, icon))
+                self._pending_posters.append((title, skeleton, img, icon))
 
             stack = ft.Stack(
                 controls=[
-                    ft.Container(ring, alignment=ft.Alignment(0, 0), width=120, height=180),
+                    skeleton,
                     img,
                     ft.Container(icon, alignment=ft.Alignment(0, 0), width=120, height=180)
                 ]
