@@ -19,6 +19,7 @@ class DatabaseManager:
             c.execute("CREATE TABLE IF NOT EXISTS shows (id INTEGER PRIMARY KEY AUTOINCREMENT, universe_id INTEGER, title TEXT, type TEXT, chrono INTEGER, release INTEGER, runtime_min INTEGER, FOREIGN KEY(universe_id) REFERENCES universes(id))")
             c.execute("CREATE TABLE IF NOT EXISTS progress (universe_name TEXT PRIMARY KEY, show_title TEXT)")
             c.execute("CREATE TABLE IF NOT EXISTS favorites (title TEXT PRIMARY KEY, type TEXT, universe TEXT)")
+            c.execute("CREATE TABLE IF NOT EXISTS ratings (title TEXT PRIMARY KEY, score INTEGER)")
             conn.commit()
 
     def _auto_migrate(self):
@@ -122,6 +123,22 @@ class DatabaseManager:
             c.execute("SELECT title FROM favorites WHERE title = ?", (title,))
             return c.fetchone() is not None
 
+    def get_rating(self, title):
+        with self._get_connection() as conn:
+            c = conn.cursor()
+            c.execute("SELECT score FROM ratings WHERE title = ?", (title,))
+            row = c.fetchone()
+            return row[0] if row else 0
+
+    def set_rating(self, title, score):
+        with self._get_connection() as conn:
+            c = conn.cursor()
+            if score == 0:
+                c.execute("DELETE FROM ratings WHERE title = ?", (title,))
+            else:
+                c.execute("INSERT OR REPLACE INTO ratings (title, score) VALUES (?, ?)", (title, score))
+            conn.commit()
+
     def get_dynamic_stats(self, processed_list, current_show):
         total_items = len(processed_list)
         if total_items == 0:
@@ -204,3 +221,38 @@ class DatabaseManager:
                 uni_id = row[0]
                 c.execute("DELETE FROM shows WHERE universe_id = ? AND title = ?", (uni_id, title))
                 conn.commit()
+
+    def get_analytics(self):
+        timeline = self.load_timeline()
+        progress = self.load_progress()
+        
+        watched_movies = 0
+        watched_shows = 0
+        universe_watch_time = {}
+        
+        for uni, shows in timeline.items():
+            uni_watched_time = 0
+            prog_title = progress.get(uni)
+            
+            is_watched = True if prog_title else False
+            found_current = False
+            
+            for s in shows:
+                if is_watched and not found_current:
+                    if s["type"] == "movie":
+                        watched_movies += 1
+                    else:
+                        watched_shows += 1
+                    uni_watched_time += s.get("runtime_min", 0)
+                    
+                    if s["title"] == prog_title:
+                        found_current = True
+            
+            if uni_watched_time > 0:
+                universe_watch_time[uni] = uni_watched_time / 60.0
+                
+        return {
+            "watched_movies": watched_movies,
+            "watched_shows": watched_shows,
+            "universe_watch_time": universe_watch_time
+        }

@@ -2,6 +2,7 @@ import flet as ft
 from ui.tabs.tracker import TrackerTab
 from ui.tabs.library import LibraryTab
 from ui.tabs.favorites import FavoritesTab
+from ui.tabs.stats import StatsTab
 from core.database import DatabaseManager
 from core.api import APIClient
 
@@ -22,11 +23,13 @@ def run():
         tracker_tab = TrackerTab(switch_func=None, db=db_manager, api=api_client)
         library_tab = LibraryTab(switch_func=None, db=db_manager, api=api_client)
         favorites_tab = FavoritesTab(switch_func=None, db=db_manager, api=api_client)
+        stats_tab = StatsTab(switch_func=None, db=db_manager, api=api_client)
 
         def switch_main_tab_by_index(idx):
             tracker_tab.visible = (idx == 0)
             library_tab.visible = (idx == 1)
             favorites_tab.visible = (idx == 2)
+            stats_tab.visible = (idx == 3)
 
             for i, btn in enumerate(main_tab_buttons):
                 btn.border = ft.Border(bottom=ft.BorderSide(2, ft.Colors.AMBER)) if i == idx else None
@@ -38,6 +41,8 @@ def run():
                 library_tab._build_grid(library_tab.uni_drop.value)
             elif idx == 2:
                 favorites_tab._build_view()
+            elif idx == 3:
+                stats_tab._build_view()
 
             page.update()
 
@@ -50,6 +55,7 @@ def run():
         tracker_tab.switch_func = switch_to_tab
         library_tab.switch_func = switch_to_tab
         favorites_tab.switch_func = switch_to_tab
+        stats_tab.switch_func = switch_to_tab
 
         def switch_main_tab(e):
             switch_main_tab_by_index(e.control.data)
@@ -58,6 +64,7 @@ def run():
             ft.Container(content=ft.Text("Tracker", weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER), data=0, on_click=switch_main_tab, padding=10, border=ft.Border(bottom=ft.BorderSide(2, ft.Colors.AMBER)), ink=True),
             ft.Container(content=ft.Text("Library", weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE70), data=1, on_click=switch_main_tab, padding=10, ink=True),
             ft.Container(content=ft.Text("Favorites", weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE70), data=2, on_click=switch_main_tab, padding=10, ink=True),
+            ft.Container(content=ft.Text("Stats", weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE70), data=3, on_click=switch_main_tab, padding=10, ink=True),
         ]
         
         main_tabs_row = ft.Row(main_tab_buttons, alignment=ft.MainAxisAlignment.CENTER, spacing=20)
@@ -65,7 +72,8 @@ def run():
         tracker_tab.visible = True
         library_tab.visible = False
         favorites_tab.visible = False
-        main_content_area = ft.Column([tracker_tab, library_tab, favorites_tab], expand=True)
+        stats_tab.visible = False
+        main_content_area = ft.Column([tracker_tab, library_tab, favorites_tab, stats_tab], expand=True)
 
         def refresh_all_tabs():
             tracker_tab._init_data(tracker_tab.show_drop.value)
@@ -87,6 +95,7 @@ def run():
                 library_tab.update()
                 
             favorites_tab._build_view()
+            stats_tab._build_view()
             page.update()
 
         search_results_col = ft.Column(scroll=ft.ScrollMode.ADAPTIVE, spacing=15, expand=True)

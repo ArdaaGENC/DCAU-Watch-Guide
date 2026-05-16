@@ -1,8 +1,8 @@
 import flet as ft
 
 class HoverContainer(ft.Container):
-    def __init__(self, content):
-        super().__init__()
+    def __init__(self, content, **kwargs):
+        super().__init__(**kwargs)
         self.content = content
         self.shape = ft.BoxShape.CIRCLE
         self.bgcolor = ft.Colors.TRANSPARENT
@@ -10,7 +10,7 @@ class HoverContainer(ft.Container):
         self.on_hover = self._handle_hover
 
     def _handle_hover(self, e):
-        self.bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.WHITE) if e.data == "true" else ft.Colors.TRANSPARENT
+        self.bgcolor = "#26FFFFFF" if e.data == "true" else ft.Colors.TRANSPARENT
         self.update()
 
 class TrackerTab(ft.Container):
@@ -70,22 +70,61 @@ class TrackerTab(ft.Container):
         self.show_drop = ft.Dropdown(width=400, label="Last Watched / Current Show", on_select=self._on_show_change)
         
         self.poster_img = ft.Image(src="", width=170, height=240, fit=ft.BoxFit.COVER, border_radius=10, visible=False)
+        
         self.main_fav_btn = ft.IconButton(
             icon=ft.Icons.FAVORITE_BORDER,
             icon_color=ft.Colors.WHITE,
             icon_size=25,
             on_click=self._toggle_main_fav
         )
-        
-        self.main_fav_wrapper = HoverContainer(content=self.main_fav_btn)
+        self.main_fav_wrapper = HoverContainer(content=self.main_fav_btn, right=5, top=5)
         self.main_fav_wrapper.visible = False
+
+        self.main_rate_btn = ft.PopupMenuButton(
+            icon=ft.Icons.STAR_BORDER,
+            icon_color=ft.Colors.WHITE,
+            icon_size=25,
+            items=[ft.PopupMenuItem(content=ft.Text("Clear"), data=0, on_click=self._on_rate_change)] +
+                  [ft.PopupMenuItem(content=ft.Text(f"{i} ⭐"), data=i, on_click=self._on_rate_change) for i in range(1, 11)]
+        )
+        self.main_rate_wrapper = HoverContainer(content=self.main_rate_btn, left=5, top=5)
+        self.main_rate_wrapper.visible = False
+
+        self.rate_badge = ft.Container(
+            content=ft.Text("", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+            bgcolor="#CC000000",
+            padding=ft.Padding(left=6, top=2, right=6, bottom=2),
+            border_radius=5,
+            left=5, top=45,
+            visible=False
+        )
+
+        self.main_ctx_menu = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.OPEN_IN_NEW,
+                icon_color=ft.Colors.WHITE,
+                icon_size=40,
+                on_click=self._open_main_tmdb
+            ),
+            bgcolor="#AA000000",
+            alignment=ft.Alignment(0, 0),
+            width=170, height=240, border_radius=10,
+            visible=False
+        )
         
-        self.poster_stack = ft.Stack(
-            controls=[
-                self.poster_img,
-                ft.Container(self.main_fav_wrapper, alignment=ft.Alignment(1, -1))
-            ],
-            width=170, height=240
+        self.poster_detector = ft.GestureDetector(
+            on_secondary_tap=self._toggle_main_ctx,
+            on_tap=self._handle_main_tap,
+            content=ft.Stack(
+                controls=[
+                    self.poster_img,
+                    self.main_fav_wrapper,
+                    self.main_rate_wrapper,
+                    self.rate_badge,
+                    self.main_ctx_menu
+                ],
+                width=170, height=240
+            )
         )
         
         self.recommendations_container = ft.Container()
@@ -95,7 +134,7 @@ class TrackerTab(ft.Container):
             self.uni_drop,     
             filter_sort_row,   
             self.show_drop,    
-            self.poster_stack,
+            self.poster_detector,
             self.recommendations_container 
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15, scroll=ft.ScrollMode.ADAPTIVE)
 
@@ -162,11 +201,69 @@ class TrackerTab(ft.Container):
         self.main_fav_btn.icon_color = ft.Colors.RED if is_fav else ft.Colors.WHITE
         self.update()
 
+    def _on_rate_change(self, e):
+        score = e.control.data
+        title = self.show_drop.value
+        if title:
+            self.db.set_rating(title, score)
+            self._update_dashboard(is_initial=False)
+
     def _toggle_rec_fav(self, e, title, item_type):
         is_fav = self.db.toggle_favorite(title, item_type, "Unknown")
         e.control.icon = ft.Icons.FAVORITE if is_fav else ft.Icons.FAVORITE_BORDER
         e.control.icon_color = ft.Colors.RED if is_fav else ft.Colors.WHITE
         self.update()
+
+    def _on_rec_rate(self, e, title):
+        self.db.set_rating(title, e.control.data)
+        self._update_dashboard(is_initial=False)
+
+    def _toggle_main_ctx(self, e):
+        self.main_ctx_menu.visible = not self.main_ctx_menu.visible
+        self.update()
+
+    def _handle_main_tap(self, e):
+        if self.main_ctx_menu.visible:
+            self.main_ctx_menu.visible = False
+            self.update()
+
+    def _open_main_tmdb(self, e):
+        self.main_ctx_menu.visible = False
+        self.update()
+        if self.show_drop.value:
+            det = self.api.fetch_show_details(self.show_drop.value)
+            if det and det.get("tmdb_id"):
+                m_type = det.get("media_type", "movie")
+                url = f"https://www.themoviedb.org/{m_type}/{det['tmdb_id']}"
+                
+                async def launch():
+                    await e.page.launch_url(url)
+                e.page.run_task(launch)
+
+    def _toggle_ctx_menu(self, e, menu_container):
+        menu_container.visible = not menu_container.visible
+        self.update()
+
+    def _handle_rec_tap(self, e, title, menu_container):
+        if menu_container.visible:
+            menu_container.visible = False
+            self.update()
+        else:
+            self.switch_func(0, title)
+
+    def _open_rec_tmdb(self, e):
+        e.control.parent.visible = False
+        self.update()
+        title = e.control.data
+        if title:
+            det = self.api.fetch_show_details(title)
+            if det and det.get("tmdb_id"):
+                m_type = det.get("media_type", "movie")
+                url = f"https://www.themoviedb.org/{m_type}/{det['tmdb_id']}"
+                
+                async def launch():
+                    await e.page.launch_url(url)
+                e.page.run_task(launch)
 
     def _update_dashboard(self, is_initial=False):
         current_uni = self.uni_drop.value
@@ -215,10 +312,22 @@ class TrackerTab(ft.Container):
         if self.show_drop.value:
             det = self.api.fetch_show_details(self.show_drop.value)
             is_fav = self.db.is_favorite(self.show_drop.value)
+            score = self.db.get_rating(self.show_drop.value)
             
             self.main_fav_btn.icon = ft.Icons.FAVORITE if is_fav else ft.Icons.FAVORITE_BORDER
             self.main_fav_btn.icon_color = ft.Colors.RED if is_fav else ft.Colors.WHITE
             self.main_fav_wrapper.visible = True
+
+            self.main_rate_wrapper.visible = True
+            if score > 0:
+                self.main_rate_btn.icon = ft.Icons.STAR
+                self.main_rate_btn.icon_color = ft.Colors.AMBER
+                self.rate_badge.content.value = f"{score}/10"
+                self.rate_badge.visible = True
+            else:
+                self.main_rate_btn.icon = ft.Icons.STAR_BORDER
+                self.main_rate_btn.icon_color = ft.Colors.WHITE
+                self.rate_badge.visible = False
             
             if det and det.get("image_url"):
                 self.poster_img.src = det.get("image_url")
@@ -232,6 +341,8 @@ class TrackerTab(ft.Container):
         else:
             self.recommendations_container.content = ft.Container()
             self.main_fav_wrapper.visible = False
+            self.main_rate_wrapper.visible = False
+            self.rate_badge.visible = False
             self.poster_img.visible = False
 
         if not is_initial:
@@ -251,7 +362,9 @@ class TrackerTab(ft.Container):
             img_src = rec.get("image")
             title = rec.get("title")
             rec_type = rec.get("type", "movie")
+            
             is_fav = self.db.is_favorite(title)
+            score = self.db.get_rating(title)
             
             fav_btn = ft.IconButton(
                 icon=ft.Icons.FAVORITE if is_fav else ft.Icons.FAVORITE_BORDER,
@@ -259,29 +372,70 @@ class TrackerTab(ft.Container):
                 icon_size=16,
                 on_click=lambda e, t=title, typ=rec_type: self._toggle_rec_fav(e, t, typ)
             )
+            fav_hover = HoverContainer(content=fav_btn, right=0, top=0)
+
+            rate_btn = ft.PopupMenuButton(
+                icon=ft.Icons.STAR if score > 0 else ft.Icons.STAR_BORDER,
+                icon_color=ft.Colors.AMBER if score > 0 else ft.Colors.WHITE,
+                icon_size=16,
+                items=[ft.PopupMenuItem(content=ft.Text("Clear"), data=0, on_click=lambda e, t=title: self._on_rec_rate(e, t))] +
+                      [ft.PopupMenuItem(content=ft.Text(f"{i} ⭐"), data=i, on_click=lambda e, t=title: self._on_rec_rate(e, t)) for i in range(1, 11)]
+            )
+            rate_hover = HoverContainer(content=rate_btn, left=0, top=0)
+
+            rate_badge = ft.Container(
+                content=ft.Text(f"{score}", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                bgcolor="#CC000000",
+                padding=ft.Padding(left=4, top=2, right=4, bottom=2),
+                border_radius=5,
+                left=5, top=30,
+                visible=score > 0
+            )
+
+            rec_ctx_menu = ft.Container(
+                content=ft.IconButton(
+                    icon=ft.Icons.OPEN_IN_NEW,
+                    icon_color=ft.Colors.WHITE,
+                    icon_size=30,
+                    data=title,
+                    on_click=self._open_rec_tmdb
+                ),
+                bgcolor="#AA000000",
+                alignment=ft.Alignment(0, 0),
+                width=100, height=150, border_radius=8,
+                visible=False
+            )
             
-            fav_hover = HoverContainer(content=fav_btn)
+            card_detector = ft.GestureDetector(
+                on_secondary_tap=lambda e, m=rec_ctx_menu: self._toggle_ctx_menu(e, m),
+                on_tap=lambda e, t=title, m=rec_ctx_menu: self._handle_rec_tap(e, t, m),
+                content=ft.Stack(
+                    controls=[
+                        ft.Image(
+                            src=img_src, 
+                            width=100, 
+                            height=150, 
+                            fit=ft.BoxFit.COVER, 
+                            border_radius=8
+                        ) if img_src else ft.Container(
+                            width=100, 
+                            height=150, 
+                            bgcolor="#333333", 
+                            border_radius=8
+                        ),
+                        fav_hover,
+                        rate_hover,
+                        rate_badge,
+                        rec_ctx_menu
+                    ],
+                    width=100, height=150
+                )
+            )
             
             card = ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Stack(
-                            controls=[
-                                ft.Image(
-                                    src=img_src, 
-                                    width=100, 
-                                    height=150, 
-                                    fit=ft.BoxFit.COVER, 
-                                    border_radius=8
-                                ) if img_src else ft.Container(
-                                    width=100, 
-                                    height=150, 
-                                    bgcolor=ft.Colors.SURFACE_VARIANT, 
-                                    border_radius=8
-                                ),
-                                ft.Container(fav_hover, alignment=ft.Alignment(1, -1))
-                            ]
-                        ),
+                        card_detector,
                         ft.Text(
                             title, 
                             size=12, 
@@ -300,8 +454,8 @@ class TrackerTab(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Divider(height=20, color=ft.Colors.OUTLINE_VARIANT),
-                ft.Text("Similar Shows", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE),
+                ft.Divider(height=20, color=ft.Colors.WHITE24),
+                ft.Text("Similar Shows", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER),
                 rec_row
             ],
             spacing=10
