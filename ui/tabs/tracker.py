@@ -163,7 +163,7 @@ class TrackerTab(ft.Container):
                 if data == title:
                     self.uni_drop.value = u
                     self.state.db.save_progress(u, data)
-                    self._update_dashboard()
+                    self.state.refresh_data() # HATA BURADAYDI, DÜZELTİLDİ!
                     return
 
     def _on_universe_change(self, e):
@@ -177,7 +177,7 @@ class TrackerTab(ft.Container):
     def _on_show_change(self, e):
         if e: e.control.value = e.data
         self.state.db.save_progress(self.uni_drop.value, self.show_drop.value)
-        self._update_dashboard()
+        self.state.refresh_data() # HATA BURADAYDI, DÜZELTİLDİ!
 
     def _toggle_main_fav(self, e):
         title = self.show_drop.value
