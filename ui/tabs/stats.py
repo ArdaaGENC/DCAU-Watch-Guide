@@ -17,6 +17,8 @@ class StatsTab(ft.Container):
     def _on_message(self, msg):
         if msg.get("action") == "DATA_CHANGED":
             self._build_view()
+        elif msg.get("action") == "NAVIGATE" and msg.get("index") == 4:
+            self._build_view()
 
     def _build_view(self):
         data = self.state.db.get_analytics()
@@ -27,7 +29,7 @@ class StatsTab(ft.Container):
 
         movie_card = ft.Container(
             content=ft.Column([
-                ft.Text("🎬 Movies", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
+                ft.Text(f"🎬 {self.state.t('movies')}", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
                 ft.Text(str(movies_count), size=28, color=ft.Colors.PRIMARY, weight=ft.FontWeight.BOLD)
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, padding=20, border_radius=10, expand=True
@@ -35,7 +37,7 @@ class StatsTab(ft.Container):
 
         show_card = ft.Container(
             content=ft.Column([
-                ft.Text("📺 Shows", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
+                ft.Text(f"📺 {self.state.t('shows')}", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
                 ft.Text(str(shows_count), size=28, color=ft.Colors.PRIMARY, weight=ft.FontWeight.BOLD)
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, padding=20, border_radius=10, expand=True
@@ -43,16 +45,18 @@ class StatsTab(ft.Container):
 
         distribution_row = ft.Row([movie_card, show_card], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
 
-        uni_time = data.get("universe_watch_time", {})
-        chart_column = ft.Column(spacing=15)
-
-        if uni_time:
-            max_hours = max(uni_time.values()) if max(uni_time.values()) > 0 else 1
-
-            for uni, hours in uni_time.items():
-                fill_ratio = hours / max_hours
-                bar_width = int(fill_ratio * 250)
-
+        chart_column = ft.Column(spacing=10)
+        time_per_uni = data.get("universe_watch_time", {})
+        
+        if time_per_uni:
+            max_time = max(time_per_uni.values()) if time_per_uni.values() else 1
+            sorted_unis = sorted(time_per_uni.items(), key=lambda x: x[1], reverse=True)
+            
+            for uni, minutes in sorted_unis:
+                hours = minutes / 60
+                pct = minutes / max_time
+                bar_width = int(pct * 250)
+                
                 bar_container = ft.Container(
                     width=bar_width if bar_width > 5 else 5,
                     height=20,
@@ -63,16 +67,16 @@ class StatsTab(ft.Container):
                 row = ft.Row([
                     ft.Text(uni[:15], width=110, text_align=ft.TextAlign.RIGHT, size=13),
                     bar_container,
-                    ft.Text(f"{hours:.1f} hrs", size=13, color=ft.Colors.ON_SURFACE_VARIANT)
+                    ft.Text(f"{hours:.1f} {self.state.t('hours')}", size=13, color=ft.Colors.ON_SURFACE_VARIANT)
                 ], alignment=ft.MainAxisAlignment.START)
 
                 chart_column.controls.append(row)
         else:
-            chart_column.controls.append(ft.Text("No watch data available yet.", color=ft.Colors.ON_SURFACE_VARIANT))
+            chart_column.controls.append(ft.Text(self.state.t("no_data_yet"), color=ft.Colors.ON_SURFACE_VARIANT))
 
         chart_panel = ft.Container(
             content=ft.Column([
-                ft.Text("Time Spent per Universe", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY),
+                ft.Text(self.state.t("time_spent_per_universe"), size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY),
                 ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
                 chart_column
             ]),
@@ -80,14 +84,13 @@ class StatsTab(ft.Container):
         )
 
         self.content_col.controls.extend([
-            ft.Text("Watch Distribution", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY),
+            ft.Text(self.state.t("watch_distribution"), size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY),
             distribution_row,
-            ft.Divider(color=ft.Colors.TRANSPARENT, height=10),
+            ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
             chart_panel
         ])
 
         if getattr(self, "page", None):
             try:
                 self.update()
-            except Exception:
-                pass
+            except Exception: pass

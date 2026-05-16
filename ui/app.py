@@ -22,12 +22,12 @@ def run():
 
         state = AppState(db_manager, api_client, page)
 
-        title = ft.Text("Universal Tracker", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
+        title = ft.Text(state.t("app_title"), size=26, weight=ft.FontWeight.BOLD, color="primary")
         
         settings_modal = SettingsModalOverlay(state)
         settings_btn = ft.IconButton(
             icon=ft.Icons.SETTINGS, 
-            icon_color=ft.Colors.PRIMARY, 
+            icon_color="primary", 
             on_click=lambda e: settings_modal.open_modal()
         )
         
@@ -41,12 +41,20 @@ def run():
 
         main_content_area = ft.Column([tracker_tab, library_tab, favorites_tab, watchlist_tab, stats_tab], expand=True)
 
+        tab_texts = [
+            ft.Text(state.t("tracker"), weight=ft.FontWeight.BOLD),
+            ft.Text(state.t("library"), weight=ft.FontWeight.BOLD),
+            ft.Text(state.t("favorites"), weight=ft.FontWeight.BOLD),
+            ft.Text(state.t("watchlist"), weight=ft.FontWeight.BOLD),
+            ft.Text(state.t("stats"), weight=ft.FontWeight.BOLD)
+        ]
+
         main_tab_buttons = [
-            ft.Container(content=ft.Text("Tracker", weight=ft.FontWeight.BOLD), data=0, padding=10, ink=True),
-            ft.Container(content=ft.Text("Library", weight=ft.FontWeight.BOLD), data=1, padding=10, ink=True),
-            ft.Container(content=ft.Text("Favorites", weight=ft.FontWeight.BOLD), data=2, padding=10, ink=True),
-            ft.Container(content=ft.Text("Watchlist", weight=ft.FontWeight.BOLD), data=3, padding=10, ink=True),
-            ft.Container(content=ft.Text("Stats", weight=ft.FontWeight.BOLD), data=4, padding=10, ink=True),
+            ft.Container(content=tab_texts[0], data=0, padding=10, ink=True),
+            ft.Container(content=tab_texts[1], data=1, padding=10, ink=True),
+            ft.Container(content=tab_texts[2], data=2, padding=10, ink=True),
+            ft.Container(content=tab_texts[3], data=3, padding=10, ink=True),
+            ft.Container(content=tab_texts[4], data=4, padding=10, ink=True),
         ]
 
         def switch_main_tab(idx):
@@ -57,8 +65,8 @@ def run():
             stats_tab.visible = (idx == 4)
 
             for i, btn in enumerate(main_tab_buttons):
-                btn.border = ft.Border(bottom=ft.BorderSide(2, ft.Colors.PRIMARY)) if i == idx else None
-                btn.content.color = ft.Colors.PRIMARY if i == idx else ft.Colors.ON_SURFACE_VARIANT
+                btn.border = ft.Border(bottom=ft.BorderSide(2, "primary")) if i == idx else None
+                btn.content.color = "primary" if i == idx else "onSurfaceVariant"
 
             page.update()
 
@@ -76,14 +84,24 @@ def run():
 
         page.floating_action_button = ft.FloatingActionButton(
             icon=ft.Icons.EDIT,
-            bgcolor=ft.Colors.PRIMARY,
+            bgcolor="primary",
             on_click=open_manage_dialog,
-            tooltip="Manage Database"
+            tooltip=state.t("manage_db")
         )
 
         def on_pubsub_message(msg):
             if msg.get("action") == "NAVIGATE":
                 switch_main_tab(msg["index"])
+            elif msg.get("action") == "DATA_CHANGED":
+                title.value = state.t("app_title")
+                tab_texts[0].value = state.t("tracker")
+                tab_texts[1].value = state.t("library")
+                tab_texts[2].value = state.t("favorites")
+                tab_texts[3].value = state.t("watchlist")
+                tab_texts[4].value = state.t("stats")
+                page.floating_action_button.tooltip = state.t("manage_db")
+                page.title = state.t("app_title")
+                page.update()
 
         state.subscribe(on_pubsub_message)
 
@@ -91,7 +109,7 @@ def run():
             expand=True, padding=20,
             content=ft.Column(
                 expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[top_row, ft.Divider(height=1, color=ft.Colors.TRANSPARENT), main_tabs_row, ft.Divider(height=1, color=ft.Colors.OUTLINE_VARIANT), main_content_area]
+                controls=[top_row, ft.Divider(height=1, color="transparent"), main_tabs_row, ft.Divider(height=1, color="outlineVariant"), main_content_area]
             )
         )
 

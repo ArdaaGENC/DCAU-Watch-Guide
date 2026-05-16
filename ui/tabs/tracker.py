@@ -11,12 +11,12 @@ class TrackerTab(ft.Container):
         
         self.state.subscribe(self._on_message)
 
-        self.progress_ring = ft.ProgressRing(value=0, stroke_width=8, width=90, height=90, color=ft.Colors.PRIMARY)
+        self.progress_ring = ft.ProgressRing(value=0, stroke_width=8, width=90, height=90, color="primary")
         self.progress_text = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD)
         
-        self.stat_watched = ft.Text("Watched: 0 / 0", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE)
-        self.stat_remaining = ft.Text("Remaining Shows: 0", size=14, color=ft.Colors.ON_SURFACE_VARIANT)
-        self.stat_time = ft.Text("Remaining Time: 0 Hours 0 Mins", size=14, color=ft.Colors.PRIMARY)
+        self.stat_watched = ft.Text(f"{self.state.t('watched')}: 0 / 0", size=15, weight=ft.FontWeight.BOLD)
+        self.stat_remaining = ft.Text(f"{self.state.t('remaining_shows')}: 0", size=14, color="onSurfaceVariant")
+        self.stat_time = ft.Text(f"{self.state.t('remaining_time')}: 0 {self.state.t('hours')} 0 {self.state.t('mins')}", size=14, color="primary")
 
         ring_stack = ft.Stack([
             self.progress_ring,
@@ -32,30 +32,30 @@ class TrackerTab(ft.Container):
                     self.stat_time
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=25)
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=25),
-            padding=15, bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, border_radius=15, width=400
+            padding=15, bgcolor="surface", border_radius=15, width=400
         )
 
-        self.uni_drop = ft.Dropdown(width=400, label="Universe", on_select=self._on_universe_change)
+        self.uni_drop = ft.Dropdown(width=400, label=self.state.t("universe"), on_select=self._on_universe_change)
 
         self.filter_drop = ft.Dropdown(
             options=[
-                ft.DropdownOption(key="all", text="All Types"),
-                ft.DropdownOption(key="movie", text="Movies Only"),
-                ft.DropdownOption(key="show", text="Shows Only")
+                ft.DropdownOption(key="all", text=self.state.t("all_types")),
+                ft.DropdownOption(key="movie", text=self.state.t("movies_only")),
+                ft.DropdownOption(key="show", text=self.state.t("shows_only"))
             ],
-            value="all", width=190, label="Filter", on_select=self._on_filter_change
+            value="all", width=190, label=self.state.t("filter"), on_select=self._on_filter_change
         )
         
         self.sort_drop = ft.Dropdown(
             options=[
-                ft.DropdownOption(key="chrono", text="Chronological"),
-                ft.DropdownOption(key="release", text="Release Order")
+                ft.DropdownOption(key="chrono", text=self.state.t("chronological")),
+                ft.DropdownOption(key="release", text=self.state.t("release_order"))
             ],
-            value="chrono", width=190, label="Sort", on_select=self._on_filter_change
+            value="chrono", width=190, label=self.state.t("sort"), on_select=self._on_filter_change
         )
         
         filter_sort_row = ft.Row([self.filter_drop, self.sort_drop], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
-        self.show_drop = ft.Dropdown(width=400, label="Last Watched / Current Show", on_select=self._on_show_change)
+        self.show_drop = ft.Dropdown(width=400, label=f"{self.state.t('last_watched')} / {self.state.t('current_show')}", on_select=self._on_show_change)
         
         self.poster_img = ft.Image(src="", width=170, height=240, fit=ft.BoxFit.COVER, border_radius=10, visible=False)
         
@@ -89,7 +89,7 @@ class TrackerTab(ft.Container):
 
         self.rate_badge = ft.Container(
             content=ft.Text("", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-            bgcolor=ft.Colors.BLACK54,
+            bgcolor="#CC000000",
             padding=ft.Padding(left=6, top=2, right=6, bottom=2),
             border_radius=5,
             left=5, top=45,
@@ -103,7 +103,7 @@ class TrackerTab(ft.Container):
                 icon_size=40,
                 on_click=self._open_main_tmdb
             ),
-            bgcolor=ft.Colors.BLACK54,
+            bgcolor="#AA000000",
             alignment=ft.Alignment(0, 0),
             width=170, height=240, border_radius=10,
             visible=False
@@ -139,8 +139,29 @@ class TrackerTab(ft.Container):
     def did_mount(self):
         self._init_data()
 
+    def _update_texts(self):
+        self.uni_drop.label = self.state.t("universe")
+        self.filter_drop.label = self.state.t("filter")
+        
+        self.filter_drop.options[0].text = self.state.t("all_types")
+        self.filter_drop.options[1].text = self.state.t("movies_only")
+        self.filter_drop.options[2].text = self.state.t("shows_only")
+
+        self.sort_drop.label = self.state.t("sort")
+        
+        self.sort_drop.options[0].text = self.state.t("chronological")
+        self.sort_drop.options[1].text = self.state.t("release_order")
+
+        self.show_drop.label = f"{self.state.t('last_watched')} / {self.state.t('current_show')}"
+        
+        if getattr(self, "page", None):
+            try:
+                self.update()
+            except Exception: pass
+
     def _on_message(self, msg):
         if msg.get("action") == "DATA_CHANGED":
+            self._update_texts()
             self._update_dashboard()
         elif msg.get("action") == "NAVIGATE" and msg.get("index") == 0:
             data = msg.get("data")
@@ -284,9 +305,11 @@ class TrackerTab(ft.Container):
             pct = stats["percentage"]
             self.progress_ring.value = pct / 100.0  
             self.progress_text.value = f"{int(pct)}%"
-            self.stat_watched.value = f"Watched: {stats['watched_count']} / {stats['total_items']}"
-            self.stat_remaining.value = f"Remaining Shows: {stats['remaining_items']}"
-            self.stat_time.value = f"Remaining Time: {stats['remaining_time_str']}"
+            self.stat_watched.value = f"{self.state.t('watched')}: {stats['watched_count']} / {stats['total_items']}"
+            self.stat_remaining.value = f"{self.state.t('remaining_shows')}: {stats['remaining_items']}"
+            
+            time_str = stats['remaining_time_str'].replace("Hours", self.state.t('hours')).replace("Mins", self.state.t('mins'))
+            self.stat_time.value = f"{self.state.t('remaining_time')}: {time_str}"
 
         if self.show_drop.value:
             det = self.state.api.fetch_show_details(self.show_drop.value)
@@ -305,7 +328,7 @@ class TrackerTab(ft.Container):
             self.main_rate_wrapper.visible = True
             if score > 0:
                 self.main_rate_btn.icon = ft.Icons.STAR
-                self.main_rate_btn.icon_color = ft.Colors.PRIMARY
+                self.main_rate_btn.icon_color = "primary"
                 self.rate_badge.content.value = f"{score}/10"
                 self.rate_badge.visible = True
             else:
@@ -364,8 +387,8 @@ class TrackerTab(ft.Container):
 
         return ft.Column(
             controls=[
-                ft.Divider(height=20, color=ft.Colors.OUTLINE_VARIANT),
-                ft.Text("Similar Shows", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY),
+                ft.Divider(height=20, color=ft.Colors.WHITE24),
+                ft.Text(self.state.t("similar_shows"), size=16, weight=ft.FontWeight.BOLD, color="primary"),
                 rec_row
             ],
             spacing=10

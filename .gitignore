@@ -1,9 +1,7 @@
 __pycache__/
 *.pyc
 .env
-data/tracker.db
-data/api_cache.json
-data/posters/
+data/
 *.db
 build/
 dist/

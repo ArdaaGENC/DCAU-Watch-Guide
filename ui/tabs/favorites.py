@@ -12,20 +12,20 @@ class FavoritesTab(ft.Container):
         self.state.subscribe(self._on_message)
 
         self.filter_drop = ft.Dropdown(
-            label="Filter",
+            label=self.state.t("filter"),
             options=[
-                ft.DropdownOption(key="all", text="All"),
-                ft.DropdownOption(key="movie", text="Movies"),
-                ft.DropdownOption(key="show", text="Shows")
+                ft.DropdownOption(key="all", text=self.state.t("all")),
+                ft.DropdownOption(key="movie", text=self.state.t("movies")),
+                ft.DropdownOption(key="show", text=self.state.t("shows"))
             ],
             value="all", width=200, on_select=self._refresh_view
         )
 
         self.group_drop = ft.Dropdown(
-            label="Group By",
+            label=self.state.t("group_by"),
             options=[
-                ft.DropdownOption(key="none", text="None"),
-                ft.DropdownOption(key="universe", text="Universe")
+                ft.DropdownOption(key="none", text=self.state.t("none")),
+                ft.DropdownOption(key="universe", text=self.state.t("universe"))
             ],
             value="none", width=200, on_select=self._refresh_view
         )
@@ -34,8 +34,26 @@ class FavoritesTab(ft.Container):
         self.content_col = ft.Column(expand=True, scroll=ft.ScrollMode.ADAPTIVE, spacing=20)
         self.content = ft.Column([self.controls_row, self.content_col], expand=True)
 
+    def _update_texts(self):
+        self.filter_drop.label = self.state.t("filter")
+        self.filter_drop.options[0].text = self.state.t("all")
+        self.filter_drop.options[1].text = self.state.t("movies")
+        self.filter_drop.options[2].text = self.state.t("shows")
+        
+        self.group_drop.label = self.state.t("group_by")
+        self.group_drop.options[0].text = self.state.t("none")
+        self.group_drop.options[1].text = self.state.t("universe")
+        
+        if getattr(self, "page", None):
+            try:
+                self.update()
+            except Exception: pass
+
     def _on_message(self, msg):
         if msg.get("action") == "DATA_CHANGED":
+            self._update_texts()
+            self._build_view()
+        elif msg.get("action") == "NAVIGATE" and msg.get("index") == 2:
             self._build_view()
 
     def did_mount(self):
@@ -60,7 +78,13 @@ class FavoritesTab(ft.Container):
                 filtered_favs[k] = v
 
         if not filtered_favs:
-            self.content_col.controls.append(ft.Container(content=ft.Text("No favorites found.", color=ft.Colors.WHITE70, size=16), alignment=ft.Alignment(0, 0), expand=True))
+            self.content_col.controls.append(
+                ft.Container(
+                    content=ft.Text("No favorites found.", color="onSurfaceVariant", size=16),
+                    alignment=ft.Alignment(0, 0), 
+                    expand=True
+                )
+            )
             self.update()
             return
 
@@ -79,7 +103,7 @@ class FavoritesTab(ft.Container):
                 grouped[uni].append(v)
             
             for uni, items in grouped.items():
-                self.content_col.controls.append(ft.Text(uni, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER))
+                self.content_col.controls.append(ft.Text(uni, size=20, weight=ft.FontWeight.BOLD, color="primary"))
                 grid = ft.GridView(max_extent=160, child_aspect_ratio=0.6, spacing=15, run_spacing=15)
                 for v in items:
                     grid.controls.append(self._create_card(v))

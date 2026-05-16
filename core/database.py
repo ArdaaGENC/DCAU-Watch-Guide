@@ -223,22 +223,25 @@ class DatabaseManager:
             uni_watched_time = 0
             prog_title = progress.get(uni)
             
-            is_watched = True if prog_title else False
-            found_current = False
+            current_index = -1
+            if prog_title:
+                for i, s in enumerate(shows):
+                    if s["title"] == prog_title:
+                        current_index = i
+                        break
             
-            for s in shows:
-                if is_watched and not found_current:
+            if current_index != -1:
+                for i in range(current_index + 1):
+                    s = shows[i]
                     if s["type"] == "movie":
                         watched_movies += 1
                     else:
                         watched_shows += 1
                     uni_watched_time += s.get("runtime_min", 0)
-                    
-                    if s["title"] == prog_title:
-                        found_current = True
             
             if uni_watched_time > 0:
-                universe_watch_time[uni] = uni_watched_time / 60.0
+                # KATİL BURADAYDI! '/ 60.0' işlemini sildik. Artık ham dakikayı gönderiyor.
+                universe_watch_time[uni] = uni_watched_time
                 
         return {
             "watched_movies": watched_movies,

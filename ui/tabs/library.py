@@ -18,7 +18,7 @@ class LibraryTab(ft.Container):
         initial_uni = self.universes[0] if self.universes else None
 
         self.uni_drop = ft.Dropdown(
-            label="Universe",
+            label=self.state.t("universe"),
             options=[ft.DropdownOption(key=u, text=u) for u in self.universes],
             value=initial_uni,
             width=300,
@@ -30,41 +30,26 @@ class LibraryTab(ft.Container):
         if initial_uni:
             self._build_grid(initial_uni, is_initial=True)
 
+    def _update_texts(self):
+        self.uni_drop.label = self.state.t("universe")
+        if getattr(self, "page", None):
+            try:
+                self.update()
+            except Exception: pass
+
     def _on_message(self, msg):
         if msg.get("action") == "DATA_CHANGED":
-            timeline_data = self.state.db.load_timeline()
-            self.universes = list(timeline_data.keys())
-            self.uni_drop.options = [ft.DropdownOption(key=u, text=u) for u in self.universes]
-            
-            if self.uni_drop.value not in self.universes and self.universes:
-                self.uni_drop.value = self.universes[0]
-            elif not self.universes:
-                self.uni_drop.value = None
-            
+            self._update_texts()
             if self.uni_drop.value:
                 self._build_grid(self.uni_drop.value)
-            else:
-                self.grid.controls.clear()
-                self.update()
 
-    def did_mount(self):
-        if self._pending_posters:
-            self.state.page.run_task(self._load_pending_posters)
-
-    async def _load_pending_posters(self):
-        pending = list(self._pending_posters)
-        self._pending_posters.clear()
-
-        results = await asyncio.gather(
-            *[asyncio.to_thread(self.state.api.fetch_show_details, title) for title, card in pending]
-        )
-
-        for (title_str, card), det in zip(pending, results):
-            card.set_image(det)
+    def _handle_dropdown_select(self, e):
+        if e: e.control.value = e.data
+        self._build_grid(self.uni_drop.value)
 
     def _build_grid(self, uni, is_initial=False):
-        new_cards = []
         self._pending_posters = []
+        new_cards = []
         timeline_data = self.state.db.load_timeline()
 
         for item in timeline_data.get(uni, []):
@@ -98,8 +83,21 @@ class LibraryTab(ft.Container):
         if not is_initial:
             self.update()
             if self._pending_posters:
-                self.state.page.run_task(self._load_pending_posters)
+                self.state.page.run_task(self._load_posters)
 
-    def _handle_dropdown_select(self, e):
-        if e: e.control.value = e.data
-        self._build_grid(self.uni_drop.value, is_initial=False)
+    def did_mount(self):
+        if self._pending_posters:
+            self.state.page.run_task(self._load_posters)
+
+    async def _load_posters(self):
+        for title, card in self._pending_posters:
+            det = self.state.api.fetch_show_details(title)
+            if det:
+                img_url = det.get("local_image_path") or det.get("image_url")
+                if img_url:
+                    card.img.src = img_url
+                    card.img.visible = True
+                    if hasattr(card, "skeleton"): card.skeleton.visible = False
+                else:
+                    card.icon.visible = True
+                card.update()

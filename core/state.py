@@ -2,6 +2,7 @@ import flet as ft
 import json
 import os
 from core.themes import THEMES
+from core.locales import LOCALES
 
 class AppState:
     def __init__(self, db, api, page):
@@ -12,6 +13,7 @@ class AppState:
         self.settings_file = os.path.join("data", "settings.json")
         self.theme_mode = "dark"
         self.theme_name = "gold"
+        self.language = "en"
         self._load_preferences()
 
     def _load_preferences(self):
@@ -21,6 +23,7 @@ class AppState:
                     data = json.load(f)
                     self.theme_mode = data.get("theme_mode", "dark")
                     self.theme_name = data.get("theme_name", "gold")
+                    self.language = data.get("language", "en")
             except:
                 pass
         self.apply_theme()
@@ -28,7 +31,8 @@ class AppState:
     def _save_preferences(self):
         data = {
             "theme_mode": self.theme_mode,
-            "theme_name": self.theme_name
+            "theme_name": self.theme_name,
+            "language": self.language
         }
         try:
             if not os.path.exists("data"):
@@ -37,6 +41,9 @@ class AppState:
                 json.dump(data, f)
         except:
             pass
+
+    def t(self, key):
+        return LOCALES.get(self.language, LOCALES["en"]).get(key, key)
 
     def subscribe(self, listener):
         self._listeners.append(listener)
@@ -58,6 +65,11 @@ class AppState:
         self.theme_name = name
         self._save_preferences()
         self.apply_theme()
+
+    def set_language(self, lang):
+        self.language = lang
+        self._save_preferences()
+        self.refresh_data()
 
     def apply_theme(self):
         self.page.theme_mode = ft.ThemeMode.DARK if self.theme_mode == "dark" else ft.ThemeMode.LIGHT

@@ -6,10 +6,16 @@ class SettingsModalOverlay(ft.Stack):
         super().__init__(expand=True, visible=False)
         self.state = state
         self._build_ui()
+        self.state.subscribe(self._on_state_change)
+
+    def _on_state_change(self, msg):
+        if msg.get("action") == "DATA_CHANGED":
+            self._update_texts()
 
     def open_modal(self):
         self.theme_switch.value = (self.state.theme_mode == "dark")
         self.color_drop.value = self.state.theme_name
+        self.lang_drop.value = self.state.language
         self.visible = True
         self.update()
 
@@ -28,9 +34,23 @@ class SettingsModalOverlay(ft.Stack):
         self.color_drop.value = self.state.theme_name
         self.update()
 
+    def _change_language(self, e):
+        self.state.set_language(e.control.value)
+        self.lang_drop.value = self.state.language
+        self.update()
+
+    def _update_texts(self):
+        self.title_text.value = self.state.t("settings")
+        self.appearance_text.value = self.state.t("appearance")
+        self.theme_switch.label = self.state.t("dark_mode")
+        self.color_drop.label = self.state.t("custom_theme")
+        self.lang_drop.label = self.state.t("language")
+        if self.page:
+            self.update()
+
     def _build_ui(self):
         self.theme_switch = ft.Switch(
-            label="Dark Mode",
+            label=self.state.t("dark_mode"),
             value=(self.state.theme_mode == "dark"),
             on_change=self._toggle_theme
         )
@@ -40,15 +60,30 @@ class SettingsModalOverlay(ft.Stack):
             dropdown_options.append(ft.DropdownOption(key=key, text=value["name"]))
 
         self.color_drop = ft.Dropdown(
-            label="Custom Theme",
+            label=self.state.t("custom_theme"),
             options=dropdown_options,
             width=250,
             on_select=self._change_color
         )
 
+        lang_options = [
+            ft.DropdownOption(key="en", text="English"),
+            ft.DropdownOption(key="tr", text="Türkçe")
+        ]
+        
+        self.lang_drop = ft.Dropdown(
+            label=self.state.t("language"),
+            options=lang_options,
+            width=250,
+            on_select=self._change_language
+        )
+
+        self.title_text = ft.Text(self.state.t("settings"), weight=ft.FontWeight.BOLD, size=18, color="primary")
+        self.appearance_text = ft.Text(self.state.t("appearance"), weight=ft.FontWeight.BOLD, color="primary")
+
         modal_header = ft.Row(
             controls=[
-                ft.Text("Settings", weight=ft.FontWeight.BOLD, size=18, color="primary"),
+                self.title_text,
                 ft.IconButton(icon=ft.Icons.CLOSE, on_click=self._close_modal)
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -56,16 +91,17 @@ class SettingsModalOverlay(ft.Stack):
 
         settings_content = ft.Column(
             controls=[
-                ft.Text("Appearance", weight=ft.FontWeight.BOLD, color="primary"),
+                self.appearance_text,
                 self.theme_switch,
-                self.color_drop
+                self.color_drop,
+                self.lang_drop
             ],
             spacing=15
         )
 
         self.modal_box = ft.Container(
             width=400,
-            height=350,
+            height=400,
             bgcolor="surface",
             border_radius=15,
             padding=20,
