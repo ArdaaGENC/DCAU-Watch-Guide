@@ -6,6 +6,7 @@ class DatabaseManager:
         os.makedirs("data", exist_ok=True)
         self.db_path = os.path.join("data", "tracker.db")
         self._init_db()
+        self._populate_default_translations()
 
     def _get_connection(self):
         return sqlite3.connect(self.db_path)
@@ -19,6 +20,41 @@ class DatabaseManager:
             c.execute("CREATE TABLE IF NOT EXISTS favorites (title TEXT PRIMARY KEY, type TEXT, universe TEXT)")
             c.execute("CREATE TABLE IF NOT EXISTS ratings (title TEXT PRIMARY KEY, score INTEGER)")
             c.execute("CREATE TABLE IF NOT EXISTS watchlist (title TEXT PRIMARY KEY, type TEXT, universe TEXT)")
+            c.execute("CREATE TABLE IF NOT EXISTS universe_translations (canonical_name TEXT, lang_code TEXT, translated_name TEXT, PRIMARY KEY(canonical_name, lang_code))")
+            conn.commit()
+
+    def _populate_default_translations(self):
+        defaults = [
+            ("DCAU Universe", "en", "DCAU Universe"),
+            ("DCAU Universe", "tr", "DCAU Evreni"),
+            ("DCAU Universe", "es", "Universo DCAU"),
+            ("Miyazaki Marathon", "en", "Miyazaki Marathon"),
+            ("Miyazaki Marathon", "tr", "Miyazaki Maratonu"),
+            ("Miyazaki Marathon", "es", "Maratón de Miyazaki"),
+            ("Marvel Universe", "en", "Marvel Universe"),
+            ("Marvel Universe", "tr", "Marvel Evreni"),
+            ("Marvel Universe", "es", "Universo Marvel")
+        ]
+        with self._get_connection() as conn:
+            c = conn.cursor()
+            for canonical, lang, translated in defaults:
+                c.execute("INSERT OR IGNORE INTO universe_translations (canonical_name, lang_code, translated_name) VALUES (?, ?, ?)", 
+                          (canonical, lang, translated))
+            conn.commit()
+
+    def get_universe_translation(self, canonical_name, lang_code):
+        with self._get_connection() as conn:
+            c = conn.cursor()
+            c.execute("SELECT translated_name FROM universe_translations WHERE canonical_name = ? AND lang_code = ?", 
+                      (canonical_name, lang_code))
+            row = c.fetchone()
+            return row[0] if row else canonical_name
+
+    def save_universe_translation(self, canonical_name, lang_code, translated_name):
+        with self._get_connection() as conn:
+            c = conn.cursor()
+            c.execute("INSERT OR REPLACE INTO universe_translations (canonical_name, lang_code, translated_name) VALUES (?, ?, ?)", 
+                      (canonical_name, lang_code, translated_name))
             conn.commit()
 
     def load_timeline(self):
@@ -166,6 +202,9 @@ class DatabaseManager:
             c = conn.cursor()
             try:
                 c.execute("INSERT INTO universes (name) VALUES (?)", (name,))
+                c.execute("INSERT INTO universe_translations (canonical_name, lang_code, translated_name) VALUES (?, 'en', ?)", (name, name))
+                c.execute("INSERT INTO universe_translations (canonical_name, lang_code, translated_name) VALUES (?, 'tr', ?)", (name, name))
+                c.execute("INSERT INTO universe_translations (canonical_name, lang_code, translated_name) VALUES (?, 'es', ?)", (name, name))
                 conn.commit()
                 return True
             except sqlite3.IntegrityError:
@@ -181,6 +220,7 @@ class DatabaseManager:
                 c.execute("DELETE FROM shows WHERE universe_id = ?", (uni_id,))
                 c.execute("DELETE FROM universes WHERE id = ?", (uni_id,))
                 c.execute("DELETE FROM progress WHERE universe_name = ?", (name,))
+                c.execute("DELETE FROM universe_translations WHERE canonical_name = ?", (name,))
                 conn.commit()
 
     def add_show(self, universe_name, title, item_type, chrono, release_year, runtime_min):
@@ -240,7 +280,6 @@ class DatabaseManager:
                     uni_watched_time += s.get("runtime_min", 0)
             
             if uni_watched_time > 0:
-                # KATİL BURADAYDI! '/ 60.0' işlemini sildik. Artık ham dakikayı gönderiyor.
                 universe_watch_time[uni] = uni_watched_time
                 
         return {

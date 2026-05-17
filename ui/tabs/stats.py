@@ -32,7 +32,7 @@ class StatsTab(ft.Container):
                 ft.Text(f"🎬 {self.state.t('movies')}", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
                 ft.Text(str(movies_count), size=28, color=ft.Colors.PRIMARY, weight=ft.FontWeight.BOLD)
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, padding=20, border_radius=10, expand=True
+            bgcolor="surface", padding=20, border_radius=15, expand=True
         )
 
         show_card = ft.Container(
@@ -40,7 +40,7 @@ class StatsTab(ft.Container):
                 ft.Text(f"📺 {self.state.t('shows')}", size=16, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.BOLD),
                 ft.Text(str(shows_count), size=28, color=ft.Colors.PRIMARY, weight=ft.FontWeight.BOLD)
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, padding=20, border_radius=10, expand=True
+            bgcolor="surface", padding=20, border_radius=15, expand=True
         )
 
         distribution_row = ft.Row([movie_card, show_card], alignment=ft.MainAxisAlignment.CENTER, spacing=20)
@@ -65,7 +65,7 @@ class StatsTab(ft.Container):
                 )
 
                 row = ft.Row([
-                    ft.Text(uni[:15], width=110, text_align=ft.TextAlign.RIGHT, size=13),
+                    ft.Text(self.state.t_uni(uni)[:15], width=110, text_align=ft.TextAlign.RIGHT, size=13),
                     bar_container,
                     ft.Text(f"{hours:.1f} {self.state.t('hours')}", size=13, color=ft.Colors.ON_SURFACE_VARIANT)
                 ], alignment=ft.MainAxisAlignment.START)
@@ -80,7 +80,7 @@ class StatsTab(ft.Container):
                 ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
                 chart_column
             ]),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST, padding=20, border_radius=10, width=500
+            bgcolor="surface", padding=20, border_radius=15, width=500
         )
 
         self.content_col.controls.extend([

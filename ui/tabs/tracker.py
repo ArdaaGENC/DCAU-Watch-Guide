@@ -141,6 +141,10 @@ class TrackerTab(ft.Container):
 
     def _update_texts(self):
         self.uni_drop.label = self.state.t("universe")
+        
+        for opt in self.uni_drop.options:
+            opt.text = self.state.t_uni(opt.key)
+            
         self.filter_drop.label = self.state.t("filter")
         
         self.filter_drop.options[0].text = self.state.t("all_types")
@@ -171,7 +175,7 @@ class TrackerTab(ft.Container):
     def _init_data(self):
         timeline_data = self.state.db.load_timeline()
         universes = list(timeline_data.keys())
-        self.uni_drop.options = [ft.DropdownOption(key=u, text=u) for u in universes]
+        self.uni_drop.options = [ft.DropdownOption(key=u, text=self.state.t_uni(u)) for u in universes]
         
         self.uni_drop.value = universes[0] if universes else None
         self._update_dashboard()

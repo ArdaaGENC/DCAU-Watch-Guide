@@ -23,6 +23,10 @@ class ManagerModalOverlay(ft.Stack):
         self.del_uni_btn.text = self.state.t("delete_selected_universe")
         self.del_show_btn.text = self.state.t("delete_selected_show")
         
+        if self.del_uni_drop.options:
+            for opt in self.del_uni_drop.options:
+                opt.text = self.state.t_uni(opt.key)
+        
         self.dialog_tab_buttons[0].content.value = self.state.t("search_and_add")
         self.dialog_tab_buttons[1].content.value = self.state.t("manage_db_tab")
         
@@ -161,7 +165,7 @@ class ManagerModalOverlay(ft.Stack):
         universes = list(self.state.db.load_timeline().keys())
         
         for res in results:
-            uni_dropdown = ft.Dropdown(options=[ft.DropdownOption(key=u, text=u) for u in universes], width=110, hint_text=self.state.t("universe"), text_size=12)
+            uni_dropdown = ft.Dropdown(options=[ft.DropdownOption(key=u, text=self.state.t_uni(u)) for u in universes], width=110, hint_text=self.state.t("universe"), text_size=12)
             chrono_input = ft.TextField(label=self.state.t("order"), width=60, text_size=12, keyboard_type=ft.KeyboardType.NUMBER)
             
             def add_clicked(e, r=res, d=uni_dropdown, c_inp=chrono_input):
@@ -197,7 +201,8 @@ class ManagerModalOverlay(ft.Stack):
     def _load_del_drops(self):
         timeline = self.state.db.load_timeline()
         unis = list(timeline.keys())
-        self.del_uni_drop.options = [ft.DropdownOption(key=u, text=u) for u in unis]
+        
+        self.del_uni_drop.options = [ft.DropdownOption(key=u, text=self.state.t_uni(u)) for u in unis]
         
         if not self.del_uni_drop.value or self.del_uni_drop.value not in unis:
             self.del_uni_drop.value = unis[0] if unis else None
@@ -248,7 +253,7 @@ class ManagerModalOverlay(ft.Stack):
                 self.state.db.delete_universe(self.del_uni_drop.value)
                 self.state.refresh_data()
                 self._load_del_drops()
-            self._show_confirm_dialog(f"{self.state.t('are_you_sure_delete_uni')} '{self.del_uni_drop.value}'?", do_delete)
+            self._show_confirm_dialog(f"{self.state.t('are_you_sure_delete_uni')} '{self.state.t_uni(self.del_uni_drop.value)}'?", do_delete)
 
     def _add_uni_action(self, e):
         if self.new_uni_input.value:

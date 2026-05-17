@@ -17,27 +17,32 @@ class SettingsModalOverlay(ft.Stack):
         self.color_drop.value = self.state.theme_name
         self.lang_drop.value = self.state.language
         self.visible = True
-        self.update()
+        if getattr(self, "page", None):
+            self.update()
 
     def _close_modal(self, e=None):
         self.visible = False
-        self.update()
+        if getattr(self, "page", None):
+            self.update()
 
     def _toggle_theme(self, e):
         new_mode = "dark" if e.control.value else "light"
         self.state.set_theme_mode(new_mode)
         self.theme_switch.value = (self.state.theme_mode == "dark")
-        self.update()
+        if getattr(self, "page", None):
+            self.update()
 
     def _change_color(self, e):
         self.state.set_theme_name(e.control.value)
         self.color_drop.value = self.state.theme_name
-        self.update()
+        if getattr(self, "page", None):
+            self.update()
 
     def _change_language(self, e):
         self.state.set_language(e.control.value)
         self.lang_drop.value = self.state.language
-        self.update()
+        if getattr(self, "page", None):
+            self.update()
 
     def _update_texts(self):
         self.title_text.value = self.state.t("settings")
@@ -45,8 +50,10 @@ class SettingsModalOverlay(ft.Stack):
         self.theme_switch.label = self.state.t("dark_mode")
         self.color_drop.label = self.state.t("custom_theme")
         self.lang_drop.label = self.state.t("language")
-        if self.page:
-            self.update()
+        if getattr(self, "page", None):
+            try:
+                self.update()
+            except Exception: pass
 
     def _build_ui(self):
         self.theme_switch = ft.Switch(
@@ -68,7 +75,8 @@ class SettingsModalOverlay(ft.Stack):
 
         lang_options = [
             ft.DropdownOption(key="en", text="English"),
-            ft.DropdownOption(key="tr", text="Türkçe")
+            ft.DropdownOption(key="tr", text="Türkçe"),
+            ft.DropdownOption(key="es", text="Español")
         ]
         
         self.lang_drop = ft.Dropdown(

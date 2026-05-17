@@ -103,7 +103,7 @@ class FavoritesTab(ft.Container):
                 grouped[uni].append(v)
             
             for uni, items in grouped.items():
-                self.content_col.controls.append(ft.Text(uni, size=20, weight=ft.FontWeight.BOLD, color="primary"))
+                self.content_col.controls.append(ft.Text(self.state.t_uni(uni), size=20, weight=ft.FontWeight.BOLD, color="primary"))
                 grid = ft.GridView(max_extent=160, child_aspect_ratio=0.6, spacing=15, run_spacing=15)
                 for v in items:
                     grid.controls.append(self._create_card(v))

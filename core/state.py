@@ -38,12 +38,15 @@ class AppState:
             if not os.path.exists("data"):
                 os.makedirs("data")
             with open(self.settings_file, "w", encoding="utf-8") as f:
-                json.dump(data, f)
+                json.dump(data, f, ensure_ascii=False, indent=4)
         except:
             pass
 
     def t(self, key):
         return LOCALES.get(self.language, LOCALES["en"]).get(key, key)
+
+    def t_uni(self, uni_name):
+        return self.db.get_universe_translation(uni_name, self.language)
 
     def subscribe(self, listener):
         self._listeners.append(listener)
@@ -79,11 +82,16 @@ class AppState:
         custom_scheme = ft.ColorScheme(
             primary=theme_data["primary"],
             on_primary=theme_data["on_primary"],
-            surface="#121212" if is_dark else "#FFFFFF",
-            on_surface="#FFFFFF" if is_dark else "#000000"
+            surface="#121212" if is_dark else "#ffffff",
+            on_surface="#ffffff" if is_dark else "#000000",
+            surface_container_highest="#1e1e1e" if is_dark else "#eaeaea",
+            on_surface_variant="#aaaaaa" if is_dark else "#555555"
         )
-
         self.page.theme = ft.Theme(color_scheme=custom_scheme)
-        self.page.bgcolor = "#0E0E0E" if is_dark else "#F5F5F5"
-        self.page.update()
-        self.refresh_data()
+        self.page.bgcolor = "#0e0e0e" if is_dark else "#f5f5f5"
+        
+        if getattr(self, "page", None):
+            try:
+                self.page.update()
+            except:
+                pass

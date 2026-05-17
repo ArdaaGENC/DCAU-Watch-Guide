@@ -19,7 +19,7 @@ class LibraryTab(ft.Container):
 
         self.uni_drop = ft.Dropdown(
             label=self.state.t("universe"),
-            options=[ft.DropdownOption(key=u, text=u) for u in self.universes],
+            options=[ft.DropdownOption(key=u, text=self.state.t_uni(u)) for u in self.universes],
             value=initial_uni,
             width=300,
             on_select=self._handle_dropdown_select
@@ -32,6 +32,10 @@ class LibraryTab(ft.Container):
 
     def _update_texts(self):
         self.uni_drop.label = self.state.t("universe")
+        
+        for opt in self.uni_drop.options:
+            opt.text = self.state.t_uni(opt.key)
+            
         if getattr(self, "page", None):
             try:
                 self.update()
